@@ -1,1 +1,1 @@
-redraw_window
+ship

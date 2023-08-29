@@ -62,9 +62,9 @@ title_screen()
 #below is game code
 
 
-
-
-
+IMAGE_SHIP = pygame.image.load('Assests/ship.png').convert_alpha()
+PLAYER_SHIP = pygame.transform.scale(IMAGE_SHIP, (150, 150))
+MISSLE = pygame.image.load('Assests/missile.png').convert_alpha()
 BACKGROUND_IMAGE = pygame.image.load('Assests/space-background-spaceship-arcade-game-090062351_prevstill.jpg').convert_alpha()
 MEME_SUN = pygame.image.load('Assests/meme-baby.png').convert_alpha()
 EVIL_ALIEN = pygame.image.load('Assests/LGM.png').convert_alpha()
@@ -72,6 +72,28 @@ TEXT = font.render('PLASMA SHOOTER', True, 'White')
 WHITE_COLOR = (255,255,255)
 
 DEFAULT_IMAGE_ALIEN = (100, 100)
+
+class Ship:
+    def __init__(self, x, y, health=100):
+        self.x = x
+        self.y = y
+        self.health = health
+        self.ship_img = None
+        self.missle_img = None
+        self.missle = []
+        self.cool_down = 0
+        
+    
+    def draw(self, window):
+        WINDOWS.blit(self.ship_img, (self.x, self.y))
+
+class Player(Ship):
+    def __init__(self, x, y, health=100):
+        super().__init__(x, y, health)
+        self.ship_img = PLAYER_SHIP
+        self.missle_img = MISSLE
+        self.mask = pygame.mask.from_surface(self.ship_img)
+        self.max_health = health
 
 EVIL_ALIEN = pygame.transform.scale(EVIL_ALIEN, DEFAULT_IMAGE_ALIEN)
 EVIL_ALIEN_HEIGHT = EVIL_ALIEN.get_height()
@@ -97,6 +119,8 @@ def main():
     evil_alien_move_down = random.randint(200, 400)  # Adjust as needed
     evil_alien_direction = random.choice([-1, 1])  # Start moving left or right
     num_direction_changes = 0
+    player_pixel =  5
+    player = Player(300, 650)
         
     while run:
         for event in pygame.event.get():
@@ -121,14 +145,33 @@ def main():
         WINDOWS.fill(WHITE_COLOR)
         BG = pygame.transform.scale(BACKGROUND_IMAGE, (WIDTH, HEIGHT))
         WINDOWS.blit(BG, (0, 0))
-        WINDOWS.blit(MEME_SUN, (750, 100))
-        WINDOWS.blit(TEXT, (700, 650))
         
+        meme_sun_x = WIDTH // 2 - MEME_SUN.get_width() // 2
+        meme_sun_y = HEIGHT // 2 - MEME_SUN.get_height() // 2
+        WINDOWS.blit(MEME_SUN, (meme_sun_x, meme_sun_y))
+        
+        text_x = WIDTH // 2 - TEXT.get_width() // 2
+        text_y = meme_sun_y + MEME_SUN.get_height() + 20  # Adjust the spacing as needed
+        WINDOWS.blit(TEXT, (text_x, text_y))
+                     
         lives_display = font.render(f"Lives: {lives}", 1, WHITE_COLOR)
         level_display = font.render(f"Level: {level}", 1, WHITE_COLOR)
         WINDOWS.blit(lives_display, (10, 10))
         WINDOWS.blit(level_display, (WIDTH - level_display.get_width() - 10, 10))
+        player.draw(WINDOWS)
 
+        #this is for user input 
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_a] and player.x - player_pixel > 0: 
+            player.x -= player_pixel
+        if keys[pygame.K_d] and player.x + player_pixel + 50 < WIDTH:
+            player.x += player_pixel
+        if keys[pygame.K_w] and player.y - player_pixel > 0:
+            player.y -= player_pixel
+        if keys[pygame.K_s] and player.y + player_pixel + 50 < HEIGHT:
+            player.y += player_pixel
+        
+        
         for alien in aliens:
             WINDOWS.blit(EVIL_ALIEN, alien.rect)
 
