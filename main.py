@@ -66,7 +66,8 @@ title_screen()
 
 IMAGE_SHIP = pygame.image.load('Assests/ship.png').convert_alpha()
 PLAYER_SHIP = pygame.transform.scale(IMAGE_SHIP, (150, 150))
-MISSLE = pygame.image.load('Assests/missile.png').convert_alpha()
+MISSLE_RAW = pygame.image.load('Assests/missle.png').convert_alpha()
+MISSLE = pygame.transform.scale(MISSLE_RAW, (50, 50))
 BACKGROUND_IMAGE = pygame.image.load('Assests/space-background-spaceship-arcade-game-090062351_prevstill.jpg').convert_alpha()
 MEME_SUN = pygame.image.load('Assests/meme-baby.png').convert_alpha()
 EVIL_ALIEN = pygame.image.load('Assests/LGM.png').convert_alpha()
@@ -94,10 +95,7 @@ class Laser:
     def clash(self, obj):
         return collide(self, obj)
     
-    
-    
-    
-    
+
 
 class Ship:
     COOLDOWN = 30
@@ -114,14 +112,16 @@ class Ship:
     
     def draw(self, window):
         WINDOWS.blit(self.ship_img, (self.x, self.y))
-
+        for laser in self.lasers:
+            laser.draw(window)
+    
     def move_lasers(self, vel, obj):
         self.cooldown()
         for laser in self.lasers:
             laser.move(vel)
             if laser.off_screen(HEIGHT):
                 self.lasers.remove(laser)
-            elif laser.collision(obj):
+            elif laser.clash(obj):
                 obj.health -= 10
                 self.lasers.remove(laser)
     
@@ -141,7 +141,8 @@ class Ship:
         return self.ship_img.get_height()
     
     def fatness(self):
-        return self.ship_img.get_width()           
+        return self.ship_img.get_width()  
+             
 class Player(Ship):
     def __init__(self, x, y, health=100):
         super().__init__(x, y, health)
@@ -162,7 +163,13 @@ class Player(Ship):
                         objs.remove(obj)
                         if laser in self.lasers:
                             self.lasers.remove(laser)
-                            
+    def draw(self, window):
+        super().draw(window)
+        self.health_bar(window)
+        
+    def health_bar(self, window):
+        pygame.draw.rect(window, (255,0,0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width(), 10))
+        pygame.draw.rect(window, (0,255,0), (self.x, self.y + self.ship_img.get_height() + 10, self.ship_img.get_width() * (self.health/self.max_health), 10))                   
                             
 EVIL_ALIEN = pygame.transform.scale(EVIL_ALIEN, DEFAULT_IMAGE_ALIEN)
 EVIL_ALIEN_HEIGHT = EVIL_ALIEN.get_height()
@@ -171,7 +178,7 @@ class Alien(Ship):
     def __init__(self, x, y, color, health=100):
         super().__init__(x, y, health)
         self.ship_img = EVIL_ALIEN 
-        self.laser_img = None
+        self.laser_img = MISSLE
         self.mask = pygame.mask.from_surface(self.ship_img)
 
     def move(self, vel):
@@ -278,7 +285,14 @@ def main():
         for alien in aliens[:]:
             alien.move(evil_alien_speed)
             alien.move_lasers(laser_speed, player)
-            if alien.y + alien.tallness() > HEIGHT:
+    
+            if random.randrange(0, 2*60) == 1:
+                alien.shoot()
+
+            if collide(alien, player):
+                player.health -= 10
+                aliens.remove(alien)
+            elif alien.y + alien.tallness() > HEIGHT:
                 lives -= 1
                 aliens.remove(alien)
             
