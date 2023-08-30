@@ -84,7 +84,7 @@ class Laser:
 
     def draw(self, window):
         window.blit(self.img, (self.x, self.y))
-
+                
     def move(self, vel):
         self.y += vel
         
@@ -114,15 +114,7 @@ class Ship:
     
     def draw(self, window):
         WINDOWS.blit(self.ship_img, (self.x, self.y))
-        for laser in self.lasers:
-            laser.draw(window)
-        
-    def tallness(self):
-        return self.ship_img.get_height()
-    
-    def fatness(self):
-        return self.ship_img.get_width()
-    
+
     def move_lasers(self, vel, obj):
         self.cooldown()
         for laser in self.lasers:
@@ -145,12 +137,16 @@ class Ship:
             self.lasers.append(laser)
             self.cool_down_counter = 1
                 
-                
+    def tallness(self):
+        return self.ship_img.get_height()
+    
+    def fatness(self):
+        return self.ship_img.get_width()           
 class Player(Ship):
     def __init__(self, x, y, health=100):
         super().__init__(x, y, health)
         self.ship_img = PLAYER_SHIP
-        self.lasers_img = MISSLE
+        self.laser_img = MISSLE
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_health = health
 
@@ -162,7 +158,7 @@ class Player(Ship):
                 self.lasers.remove(laser)
             else:
                 for obj in objs:
-                    if laser.collision(obj):
+                    if laser.clash(obj):
                         objs.remove(obj)
                         if laser in self.lasers:
                             self.lasers.remove(laser)
@@ -188,9 +184,9 @@ class Alien(Ship):
             self.cool_down_counter = 1
 
 def collide(obj1, obj2):
-    offset_x = obj2.x - obj1.x 
+    offset_x = obj2.x - obj1.x #objects corners 
     offset_y = obj2.y - obj1.y 
-    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None #if the offsets of the corners overlap then it collides 
 
 def main():
     run = True
@@ -227,9 +223,10 @@ def main():
         level_display = font.render(f"Level: {level}", 1, (225,0,0))
         WINDOWS.blit(lives_display, (10, 10))
         WINDOWS.blit(level_display, (WIDTH - level_display.get_width() - 10, 10))
+        
         for alien in aliens:
             alien.draw(WINDOWS)
-        
+  
         player.draw(WINDOWS)
         
         if lose:
@@ -274,13 +271,18 @@ def main():
             player.y -= player_pixel
         if keys[pygame.K_s] and player.y + player_pixel + player.tallness() < HEIGHT:
             player.y += player_pixel
+        if keys[pygame.K_SPACE]:
+            player.shoot()
+        
         
         for alien in aliens[:]:
             alien.move(evil_alien_speed)
+            alien.move_lasers(laser_speed, player)
             if alien.y + alien.tallness() > HEIGHT:
                 lives -= 1
                 aliens.remove(alien)
             
+        player.move_lasers(-laser_speed, aliens)
         window_refresh()
 
     pygame.quit()
