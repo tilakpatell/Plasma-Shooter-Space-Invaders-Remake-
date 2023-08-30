@@ -1,5 +1,7 @@
 import pygame
 import random
+import time
+import os
 pygame.init
 
 WIDTH, HEIGHT= 1000, 1000
@@ -44,7 +46,7 @@ def title_screen():
                 quit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if start_button.rect.collidepoint(event.pos):
-                    return  # Return to start the game
+                    return  
 
         WINDOWS.fill(BLACK)
         WINDOWS.blit(title, title_rect)
@@ -73,75 +75,142 @@ WHITE_COLOR = (255,255,255)
 
 DEFAULT_IMAGE_ALIEN = (100, 100)
 
+class Laser:
+    def __init__(self, x, y, img):
+        self.x = x
+        self.y = y
+        self.img = img
+        self.mask = pygame.mask.from_surface(self.img)
+
+    def draw(self, window):
+        window.blit(self.img, (self.x, self.y))
+
+    def move(self, vel):
+        self.y += vel
+        
+    def off_screen(self, height):
+        return not(self.y <= height and self.y >= 0)
+    
+    def clash(self, obj):
+        return collide(self, obj)
+    
+    
+    
+    
+    
+
 class Ship:
+    COOLDOWN = 30
+    
     def __init__(self, x, y, health=100):
         self.x = x
         self.y = y
         self.health = health
         self.ship_img = None
-        self.missle_img = None
-        self.missle = []
-        self.cool_down = 0
+        self.laser_img = None
+        self.lasers = []
+        self.cool_down_counter = 0
         
     
     def draw(self, window):
         WINDOWS.blit(self.ship_img, (self.x, self.y))
-
+        for laser in self.lasers:
+            laser.draw(window)
+        
+    def tallness(self):
+        return self.ship_img.get_height()
+    
+    def fatness(self):
+        return self.ship_img.get_width()
+    
+    def move_lasers(self, vel, obj):
+        self.cooldown()
+        for laser in self.lasers:
+            laser.move(vel)
+            if laser.off_screen(HEIGHT):
+                self.lasers.remove(laser)
+            elif laser.collision(obj):
+                obj.health -= 10
+                self.lasers.remove(laser)
+    
+    def cooldown(self):
+        if self.cool_down_counter >= self.COOLDOWN:
+            self.cool_down_counter = 0
+        elif self.cool_down_counter > 0:
+            self.cool_down_counter += 1
+            
+    def shoot(self):
+        if self.cool_down_counter == 0:
+            laser = Laser(self.x, self.y, self.laser_img)
+            self.lasers.append(laser)
+            self.cool_down_counter = 1
+                
+                
 class Player(Ship):
     def __init__(self, x, y, health=100):
         super().__init__(x, y, health)
         self.ship_img = PLAYER_SHIP
-        self.missle_img = MISSLE
+        self.lasers_img = MISSLE
         self.mask = pygame.mask.from_surface(self.ship_img)
         self.max_health = health
 
+    def move_lasers(self, vel, objs):
+        self.cooldown()
+        for laser in self.lasers:
+            laser.move(vel)
+            if laser.off_screen(HEIGHT):
+                self.lasers.remove(laser)
+            else:
+                for obj in objs:
+                    if laser.collision(obj):
+                        objs.remove(obj)
+                        if laser in self.lasers:
+                            self.lasers.remove(laser)
+                            
+                            
 EVIL_ALIEN = pygame.transform.scale(EVIL_ALIEN, DEFAULT_IMAGE_ALIEN)
 EVIL_ALIEN_HEIGHT = EVIL_ALIEN.get_height()
-class Alien(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__()
-        self.image = EVIL_ALIEN
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
 
-aliens = pygame.sprite.Group()
-for _ in range(10):  # Create 10 aliens
-    alien = Alien(random.randint(0, WIDTH - 50), random.randint(0, HEIGHT - 50))
-    aliens.add(alien)
+class Alien(Ship):
+    def __init__(self, x, y, color, health=100):
+        super().__init__(x, y, health)
+        self.ship_img = EVIL_ALIEN 
+        self.laser_img = None
+        self.mask = pygame.mask.from_surface(self.ship_img)
 
+    def move(self, vel):
+        self.y += vel
+
+    def shoot(self):
+        if self.cool_down_counter == 0:
+            laser = Laser(self.x-20, self.y, self.laser_img)
+            self.lasers.append(laser)
+            self.cool_down_counter = 1
+
+def collide(obj1, obj2):
+    offset_x = obj2.x - obj1.x 
+    offset_y = obj2.y - obj1.y 
+    return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
 
 def main():
     run = True
-    level = 1
+    level = 0
     lives = 5
-    evil_alien_speed = random.uniform(1, 5)  # You can use uniform for decimal values
-    evil_alien_move_down = random.randint(200, 400)  # Adjust as needed
-    evil_alien_direction = random.choice([-1, 1])  # Start moving left or right
-    num_direction_changes = 0
+    wave_length = 5
+    evil_alien_speed = 2 
+    #evil_alien_move_down = random.randint(200, 400)  
+    #evil_alien_direction = random.choice([-1, 1])  
+    #num_direction_changes = 0 old code for different alien spawn method, didnt work LOL
     player_pixel =  5
     player = Player(300, 650)
+    aliens = []
+    laser_speed = 5
+    lose = False
+    lose_counter = 0
+    clock = pygame.time.Clock()
+    
+    def window_refresh():
         
-    while run:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-                
-        for alien in aliens:
-            alien.rect.x += evil_alien_speed * evil_alien_direction
-
-            if alien.rect.right >= WIDTH or alien.rect.left <= 0:
-                evil_alien_direction *= -1
-                num_direction_changes += 1
-
-                if num_direction_changes % 5 == 0:
-                    for a in aliens:
-                        a.rect.y += evil_alien_move_down
-                        
-            if alien.rect.top >= HEIGHT:
-                alien.rect.bottom = 0
-                alien.rect.x = random.randint(0, WIDTH - 50)
-
         WINDOWS.fill(WHITE_COLOR)
         BG = pygame.transform.scale(BACKGROUND_IMAGE, (WIDTH, HEIGHT))
         WINDOWS.blit(BG, (0, 0))
@@ -154,38 +223,69 @@ def main():
         text_y = meme_sun_y + MEME_SUN.get_height() + 20  # Adjust the spacing as needed
         WINDOWS.blit(TEXT, (text_x, text_y))
                      
-        lives_display = font.render(f"Lives: {lives}", 1, WHITE_COLOR)
-        level_display = font.render(f"Level: {level}", 1, WHITE_COLOR)
+        lives_display = font.render(f"Lives: {lives}", 1, (0,255,0))
+        level_display = font.render(f"Level: {level}", 1, (225,0,0))
         WINDOWS.blit(lives_display, (10, 10))
         WINDOWS.blit(level_display, (WIDTH - level_display.get_width() - 10, 10))
+        for alien in aliens:
+            alien.draw(WINDOWS)
+        
         player.draw(WINDOWS)
-
+        
+        if lose:
+            YOU_LOSE = font.render("YOU LOSEEEE LLLL", 1, (225,0,0))
+            WINDOWS.blit(YOU_LOSE, (WIDTH/2 - YOU_LOSE.get_width()/2, 500))
+         
+        pygame.display.update()
+    
+    while run:
+        clock.tick(60)
+        
+        window_refresh()
+        if lives <= 0 or player.health <= 0:
+            lose = True
+            lose_counter += 1
+            
+        if lose:
+            if lose_counter > 60 * 3:
+                run = False
+            else:
+                continue
+            
+        if len(aliens) == 0:
+            level += 1
+            wave_length += 5
+            for i in range(wave_length):
+                alien = Alien(random.randrange(50, WIDTH-100), random.randrange(-1500, -100), EVIL_ALIEN)
+                aliens.append(alien)
+        
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                
         #this is for user input 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a] and player.x - player_pixel > 0: 
             player.x -= player_pixel
-        if keys[pygame.K_d] and player.x + player_pixel + 50 < WIDTH:
+        if keys[pygame.K_d] and player.x + player_pixel + player.fatness() < WIDTH:
             player.x += player_pixel
         if keys[pygame.K_w] and player.y - player_pixel > 0:
             player.y -= player_pixel
-        if keys[pygame.K_s] and player.y + player_pixel + 50 < HEIGHT:
+        if keys[pygame.K_s] and player.y + player_pixel + player.tallness() < HEIGHT:
             player.y += player_pixel
         
-        
-        for alien in aliens:
-            WINDOWS.blit(EVIL_ALIEN, alien.rect)
-
-        pygame.display.update()
-        Clock.tick(60)
+        for alien in aliens[:]:
+            alien.move(evil_alien_speed)
+            if alien.y + alien.tallness() > HEIGHT:
+                lives -= 1
+                aliens.remove(alien)
+            
+        window_refresh()
 
     pygame.quit()
 
 
-pygame.display.update()
-Clock.tick(60)
 
+        
 main()
-
-
-
-
