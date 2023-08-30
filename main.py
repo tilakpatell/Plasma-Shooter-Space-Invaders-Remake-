@@ -12,8 +12,8 @@ pygame.font.init()
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-
-font = pygame.font.Font('Font/Minecraft.ttf', 50)
+PIXEL_BACKGROUND = pygame.image.load('Assests/PIXELBACKGROUND.jpg')
+font = pygame.font.Font('Font/Minecraft.ttf', 75)
 
 BUTTON_WIDTH = 200
 BUTTON_HEIGHT = 200
@@ -49,6 +49,7 @@ def title_screen():
                     return  
 
         WINDOWS.fill(BLACK)
+        WINDOWS.blit(PIXEL_BACKGROUND, (0, 0))
         WINDOWS.blit(title, title_rect)
 
         start_button.draw(WINDOWS)
@@ -186,7 +187,7 @@ class Alien(Ship):
 
     def shoot(self):
         if self.cool_down_counter == 0:
-            laser = Laser(self.x-20, self.y, self.laser_img)
+            laser = Laser(self.x+20, self.y, self.laser_img)
             self.lasers.append(laser)
             self.cool_down_counter = 1
 
