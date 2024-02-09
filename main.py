@@ -66,7 +66,7 @@ title_screen()
 
 
 IMAGE_SHIP = pygame.image.load('Assests/ship.png').convert_alpha()
-PLAYER_SHIP = pygame.transform.scale(IMAGE_SHIP, (150, 150))
+PLAYER_SHIP = pygame.transform.scale(IMAGE_SHIP, (100, 100))
 MISSLE_RAW = pygame.image.load('Assests/missle.png').convert_alpha()
 MISSLE = pygame.transform.scale(MISSLE_RAW, (50, 50))
 BACKGROUND_IMAGE = pygame.image.load('Assests/space-background-spaceship-arcade-game-090062351_prevstill.jpg').convert_alpha()
